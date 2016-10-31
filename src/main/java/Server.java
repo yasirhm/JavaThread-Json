@@ -67,7 +67,10 @@ public class Server{
                                     if (deposit.getId().equals(transaction.getDeposit())) {
                                         Method method = deposit.getClass().getMethod(transaction.getType(), Integer.class);
                                         log("method name : " + method.getName());
-                                        method.invoke(deposit, parseInt(transaction.getAmount()));
+                                        method.invoke(deposit, transaction.getAmount());
+                                        transaction.setAmount(deposit.getInitialBalance());
+
+                                        //send object
                                     }
                                 }
 

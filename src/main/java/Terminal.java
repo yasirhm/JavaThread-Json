@@ -92,7 +92,7 @@ log("terminal id = "+terminalId);
                     Element eElement = (Element) nNode;
                     Transaction trnsaction = new Transaction(parseInt(eElement.getAttribute("id")),
                             eElement.getAttribute("type"),
-                            eElement.getAttribute("amount").replaceAll(",", ""),
+                            parseInt(eElement.getAttribute("amount").replaceAll(",", "")),
                             eElement.getAttribute("deposit"));
                     transactions.add(trnsaction);
                 }

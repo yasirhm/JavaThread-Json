@@ -6,14 +6,18 @@ import java.io.Serializable;
 public class Transaction implements Serializable {
     private String type;
     private Integer id;
-    private String amount;
+    private Integer amount;
     private String deposit;
 
-    public Transaction(Integer id, String type, String amount, String deposit) {
+    public Transaction(Integer id, String type, Integer amount, String deposit) {
         this.id = id;
         this.type = type;
         this.amount = amount;
         this.deposit = deposit;
+    }
+
+    public void setAmount(Integer amount) {
+        this.amount = amount;
     }
 
     public String getType() {
@@ -24,7 +28,7 @@ public class Transaction implements Serializable {
         return id;
     }
 
-    public String getAmount() {
+    public Integer getAmount() {
         return amount;
     }
 
