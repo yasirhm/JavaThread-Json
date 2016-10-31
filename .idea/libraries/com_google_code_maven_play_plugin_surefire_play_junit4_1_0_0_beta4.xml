@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="com.google.code.maven-play-plugin:surefire-play-junit4:1.0.0-beta4" type="repository">
+    <properties maven-id="com.google.code.maven-play-plugin:surefire-play-junit4:1.0.0-beta4" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/surefire-play-junit4-1.0.0-beta4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/play12-extensions-1.0.0-beta4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/junit-4.8.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/surefire-api-2.11.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/play-1.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
