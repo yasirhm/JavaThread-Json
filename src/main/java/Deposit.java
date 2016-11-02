@@ -32,19 +32,24 @@ public class Deposit {
     public Integer getInitialBalance() {
         return initialBalance;
     }
-    public void withdraw(Integer amount)throws BalanceException {
-        if (amount <= initialBalance){
-            initialBalance = initialBalance - amount;
+
+    public void withdraw(Integer amount) throws BalanceException {
+        synchronized (this) {
+            if (amount <= initialBalance) {
+                initialBalance = initialBalance - amount;
+            } else throw new BalanceException("There is not enough balance.");
+            System.out.println("withdraw " + initialBalance);
         }
-        else throw new BalanceException("There is not enough balance.");
-        System.out.println("withdraw "+initialBalance);
+
     }
+
     public void deposit(Integer amount) throws BalanceException {
-        Integer temp = amount + initialBalance;
-        if (temp <= upperBound.intValue()){
-            initialBalance = temp;
+        synchronized (this) {
+            Integer temp = amount + initialBalance;
+            if (temp <= upperBound.intValue()) {
+                initialBalance = temp;
+            } else throw new BalanceException("Transaction is more than amount that allowed.");
+            System.out.println("Deposit " + initialBalance);
         }
-        else throw new BalanceException("Transaction is more than amount that allowed.");
-        System.out.println("Deposit "+initialBalance);
     }
 }

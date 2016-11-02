@@ -1,6 +1,7 @@
 /**
  * Created by Yasi on 10/29/2016.
  */
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -12,95 +13,111 @@ import java.math.BigDecimal;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+
 import static java.lang.Integer.parseInt;
 
-public class Server{
-    private static Integer PORT ;
+public class Server {
+    private static Integer PORT;
+    // private Socket socket;
     private static HashSet<String> terminalsId = new HashSet<String>();
     public String outLog;
     public List<Deposit> deposits = new ArrayList<Deposit>();
+    public List<String> logFile = new ArrayList<String>();
 
-    private class Handler extends Thread{
-        private Socket socket ;
+    private class Handler extends Thread {
+        private Socket socket;
         String terminalID;
-        public Handler( Socket cs) {this.socket = cs;}
+
+        public Handler(Socket cs) {
+            this.socket = cs;
+        }
         public void run() {
             String cmd;
+            Integer transactionSize;
             try {
                 System.out.println("Server handler is running!");
                 // Create character streams for the socket.
-                BufferedReader in=new BufferedReader(new InputStreamReader(System.in));
-                DataInputStream din=new DataInputStream(socket.getInputStream());
-                DataOutputStream dout=new DataOutputStream(socket.getOutputStream());
-
-                ObjectInputStream obj = new ObjectInputStream(socket.getInputStream());
-                //InputStream is = s.getInputStream();
-               // ObjectInputStream ois = new ObjectIn
-                // putStream(is);
+                BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+                log("1");
+                DataInputStream din = new DataInputStream(socket.getInputStream());
+                log("2");
+                DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
+                log("3");
+                ObjectInputStream inputStreamObject = new ObjectInputStream(socket.getInputStream());
+                log("4");
 
                 while (true) {
-                    terminalID = din.readUTF();
-                    System.out.println("client ID: "+terminalID);
+                    cmd = din.readUTF(); //Read
+                    String[] words = cmd.split(",");
+                    terminalID = words[1];
+                    transactionSize = parseInt(words[0]);
                     if (terminalID == null) {
                         return;
                     }
                     synchronized (terminalsId) {
-                        terminalsId.add(terminalID);
+                        if (terminalsId.add(terminalID))
+                            logFile.add("\nNew Terminal --> ID : "+ words[1]+" Socket : "+socket);
+                        dout.writeUTF("received"); //Write
                         break;
                     }
                 }
-                // Accept messages from this client
-                while(true){
-                    try{
-                        System.out.println("Here : ");
-                        if (in.readLine() == "AllDataSent") {
-                            log("ALL DATA SENR");
-                            break;
-                        }
-                        else {
-                            Transaction transaction = (Transaction) obj.readObject();
-                            System.out.println("Handler recieved : " + transaction.getType());
-                            if (transaction == null)
-                                return;
-                            synchronized (transaction) {
-                                for (Deposit deposit : deposits) {
-                                    if (deposit.getId().equals(transaction.getDeposit())) {
-                                        Method method = deposit.getClass().getMethod(transaction.getType(), Integer.class);
-                                        log("method name : " + method.getName());
-                                        method.invoke(deposit, transaction.getAmount());
-                                        transaction.setAmount(deposit.getInitialBalance());
-
-                                        //send object
-                                    }
+                /* Accept messages from this terminal */
+                while (!transactionSize.equals(0)) {
+                    System.out.println("Here : ");
+                    Transaction transaction = (Transaction) inputStreamObject.readObject();//Read
+                    logFile.add("Received Request \n \t Deposit : "+transaction.getDeposit()
+                            +" transaction type : "+transaction.getType()+" amount : "+transaction.getAmount() );
+                    System.out.println("Handler recieved : " + transaction.getType());
+                    if (transaction == null)
+                        return;
+                    --transactionSize;
+                    for (Deposit deposit : deposits) {
+                        if (deposit.getId().equals(transaction.getDeposit())) {
+                            //  Method method = deposit.getClass().getMethod(transaction.getType(), Integer.class);
+                            // log("method name " + method.getName());
+                            //  method.invoke(deposit, transaction.getAmount());
+                            try {
+                                if (transaction.getType().equals("deposit"))
+                                    deposit.deposit(transaction.getAmount());
+                                else {
+                                    deposit.withdraw(transaction.getAmount());
                                 }
-
+                                transaction.setAmount(deposit.getInitialBalance());
+                                String msg = (deposit.getInitialBalance()).toString();//Write
+                                dout.writeUTF(","+msg);
+                                logFile.add("Response Sent \n \t Customer Name : "+deposit.getCustomer()+" type : "+transaction.getType()
+                                        +" Balance : "+deposit.getInitialBalance()+"\n"
+                                );
+                            } catch (BalanceException e) {
+                                dout.writeUTF(e.getMessage());
+                                logFile.add("Response Sent \n \t Error :  "+e.getMessage()+"\n");
+                                System.out.println("Error : " + e.getMessage());
                             }
                         }
-                    }catch (ClassNotFoundException e){
-                        System.out.println(e);
-                    } catch(NoSuchMethodException e) {
-                        System.out.println(e);
-                    }catch(InvocationTargetException e) {
-                        System.out.println(e);
-                    }catch (IllegalAccessException e){
-                        System.out.println(e);
                     }
-
                 }
-                String str="",str2="";
-                while(!str.equals("stop")){
-                    str=din.readUTF();
-                    System.out.println("client "+terminalsId+" says: "+str);
-                    System.out.println("Server  listeninggggg to : "+terminalsId);
-                    str2=in.readLine();
+                writeIntoAccessFile(outLog);
+                log("TERMINAL ID: " + terminalID);
+                for (Deposit dep : deposits) {
+                    System.out.println(dep.getId() + " --> " + dep.getInitialBalance());
+                }
+                /*
+                String str = "", str2 = "";
+                while (!str.equals("stop")) {
+                    str = din.readUTF();
+                    System.out.println("client " + terminalsId + " says: " + str);
+                    System.out.println("Server  listeninggggg to : " + terminalsId);
+                    str2 = in.readLine();
                     dout.writeUTF(str2);
-                    System.out.println("flushed "+str2);
+                    System.out.println("flushed " + str2);
                     dout.flush();
                     System.out.println("flushed ");
                 }
-                //System.out.println("Stop listening: ");
+                */
+            } catch (ClassNotFoundException e) {
+                System.out.println(e.getMessage());
             } catch (IOException e) {
-                System.out.println(e);
+                System.out.println(e.getMessage());
             } finally {
                 // This client is going down!  Remove its id
                 if (terminalID != null) {
@@ -113,35 +130,47 @@ public class Server{
                 }
             }
         }
+
+        public void sendObject() {
+            try {
+                DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
+                dout.writeUTF("0");
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+        }
     }
-    void log(String string){
+
+    void log(String string) {
         System.out.println(string);
     }
-    private void readJSONFromFile(){
-        @SuppressWarnings("unchecked")
-            JSONParser parser = new JSONParser();
-            try {
-                Object reader = parser.parse(new FileReader("src/main/resources/core.json"));
-                JSONObject jsonObject = (JSONObject) reader;
-                Long port = (Long) jsonObject.get("port");
-                PORT = port.intValue();
-                outLog = (String) jsonObject.get("outLog");
-                JSONArray depositArray = (JSONArray) jsonObject.get("deposits");
-                for(Object obj  :depositArray){
-                    JSONObject jsonObj = (JSONObject) obj;
-                    Deposit deposit = new Deposit((String) jsonObj.get("customer"),(String) jsonObj.get("id"),
-                             parseInt(((String) jsonObj.get("initialBalance")).replaceAll(",", "")),
-                            new BigDecimal(((String) jsonObj.get("upperBound")).replaceAll(",", ""))
-                            );
-                    deposits.add(deposit);
-                }
 
-            } catch (Exception e) {
-                e.printStackTrace();
+    private void readJSONFromFile() {
+        @SuppressWarnings("unchecked")
+        JSONParser parser = new JSONParser();
+        try {
+            Object reader = parser.parse(new FileReader("src/main/resources/core.json"));
+            JSONObject jsonObject = (JSONObject) reader;
+            Long port = (Long) jsonObject.get("port");
+            PORT = port.intValue();
+            outLog = (String) jsonObject.get("outLog");
+            JSONArray depositArray = (JSONArray) jsonObject.get("deposits");
+            for (Object obj : depositArray) {
+                JSONObject jsonObj = (JSONObject) obj;
+                Deposit deposit = new Deposit((String) jsonObj.get("customer"), (String) jsonObj.get("id"),
+                        parseInt(((String) jsonObj.get("initialBalance")).replaceAll(",", "")),
+                        new BigDecimal(((String) jsonObj.get("upperBound")).replaceAll(",", ""))
+                );
+                deposits.add(deposit);
             }
 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
-    public void run()throws IOException{
+
+    public void run() throws IOException {
         ServerSocket listener = new ServerSocket(PORT);
         try {
             while (true) {
@@ -150,6 +179,23 @@ public class Server{
             }
         } finally {
             listener.close();
+        }
+    }
+
+    private void writeIntoAccessFile(String fileName) {
+        try {
+            File file = new File(fileName);
+            RandomAccessFile raf = new RandomAccessFile(file, "rw");
+           // raf.writeBytes("Terminal ID " + terminalId + "\n");
+            raf.seek(file.length());
+
+            //raf.writeBytes("\nThis will complete the Project.");
+            for (String str : logFile) {
+                raf.writeBytes("\n" + str);
+            }
+            raf.close();
+        } catch (IOException e) {
+            System.out.println("IOException:");
         }
     }
 
