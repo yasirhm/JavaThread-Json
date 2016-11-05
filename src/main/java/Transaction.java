@@ -1,7 +1,7 @@
 import java.io.Serializable;
 
 /**
- * Created by dotinschool6 on 10/30/2016.
+ * Created by Yasi on 10/30/2016.
  */
 public class Transaction implements Serializable {
     private String type;

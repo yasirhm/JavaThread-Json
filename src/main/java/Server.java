@@ -24,6 +24,10 @@ public class Server {
     public List<Deposit> deposits = new ArrayList<Deposit>();
     public List<String> logFile = new ArrayList<String>();
 
+    public String getOutLog() {
+        return outLog;
+    }
+
     private class Handler extends Thread {
         private Socket socket;
         String terminalID;
@@ -38,56 +42,65 @@ public class Server {
                 System.out.println("Server handler is running!");
                 // Create character streams for the socket.
                 BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-                log("1");
+                //log("1");
                 DataInputStream din = new DataInputStream(socket.getInputStream());
-                log("2");
+                //log("2");
                 DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
-                log("3");
+                //log("3");
                 ObjectInputStream inputStreamObject = new ObjectInputStream(socket.getInputStream());
-                log("4");
+                //log("4");
 
-                while (true) {
+               // while (true) {
+                    System.out.println("Here : ");
                     cmd = din.readUTF(); //Read
                     String[] words = cmd.split(",");
                     terminalID = words[1];
                     transactionSize = parseInt(words[0]);
+                    log("New terminal "+terminalID);
                     if (terminalID == null) {
+                        System.out.println("Break : ");
                         return;
                     }
-                    synchronized (terminalsId) {
+                 //   synchronized (terminalsId) {
                         if (terminalsId.add(terminalID))
-                            logFile.add("\nNew Terminal --> ID : "+ words[1]+" Socket : "+socket);
+                            logFile.add("\nNew Terminal --> ID : "+ words[1]+" Socket : "+socket.getPort());
+                        logFile.add(new java.util.Date().toString());
                         dout.writeUTF("received"); //Write
-                        break;
-                    }
-                }
+
+                  //      break;
+                  //  }
+               // }
                 /* Accept messages from this terminal */
                 while (!transactionSize.equals(0)) {
-                    System.out.println("Here : ");
                     Transaction transaction = (Transaction) inputStreamObject.readObject();//Read
                     logFile.add("Received Request \n \t Deposit : "+transaction.getDeposit()
                             +" transaction type : "+transaction.getType()+" amount : "+transaction.getAmount() );
-                    System.out.println("Handler recieved : " + transaction.getType());
+
+                   // System.out.println("Handler recieved : " + transaction.getType());
                     if (transaction == null)
                         return;
                     --transactionSize;
                     for (Deposit deposit : deposits) {
                         if (deposit.getId().equals(transaction.getDeposit())) {
-                            //  Method method = deposit.getClass().getMethod(transaction.getType(), Integer.class);
-                            // log("method name " + method.getName());
-                            //  method.invoke(deposit, transaction.getAmount());
                             try {
-                                if (transaction.getType().equals("deposit"))
-                                    deposit.deposit(transaction.getAmount());
-                                else {
-                                    deposit.withdraw(transaction.getAmount());
-                                }
-                                transaction.setAmount(deposit.getInitialBalance());
+log("thread name: "+Thread.currentThread().getName());
+                               // synchronized (this) {
+                                    /*try {
+                                        this.wait();
+                                    } catch(InterruptedException e) {
+                                    }*/
+                                    if (transaction.getType().equals("deposit"))
+                                        deposit.deposit(transaction.getAmount());
+                                    else {
+                                        deposit.withdraw(transaction.getAmount());
+                                    }
+
+                                    transaction.setAmount(deposit.getInitialBalance());
+                              //  }
                                 String msg = (deposit.getInitialBalance()).toString();//Write
                                 dout.writeUTF(","+msg);
                                 logFile.add("Response Sent \n \t Customer Name : "+deposit.getCustomer()+" type : "+transaction.getType()
-                                        +" Balance : "+deposit.getInitialBalance()+"\n"
-                                );
+                                        +" Balance : "+deposit.getInitialBalance()+"\n");
                             } catch (BalanceException e) {
                                 dout.writeUTF(e.getMessage());
                                 logFile.add("Response Sent \n \t Error :  "+e.getMessage()+"\n");
@@ -130,7 +143,6 @@ public class Server {
                 }
             }
         }
-
         public void sendObject() {
             try {
                 DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
@@ -174,9 +186,11 @@ public class Server {
         ServerSocket listener = new ServerSocket(PORT);
         try {
             while (true) {
-                new Handler(listener.accept()).start();
-                System.out.println("out of handler ");
+               new Handler(listener.accept()).start();
+                //new Thread(new Handler(listener.accept()), "Handler").start();
+                //handler.start();
             }
+
         } finally {
             listener.close();
         }
@@ -194,6 +208,7 @@ public class Server {
                 raf.writeBytes("\n" + str);
             }
             raf.close();
+            logFile.clear();
         } catch (IOException e) {
             System.out.println("IOException:");
         }
@@ -204,6 +219,8 @@ public class Server {
         Server server = new Server();
         server.readJSONFromFile();
         server.run();
+        System.out.println("STopped: ");
+        //server.writeIntoAccessFile(server.getOutLog());
     }
 
 }

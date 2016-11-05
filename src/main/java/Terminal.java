@@ -1,5 +1,3 @@
-import com.sun.corba.se.spi.servicecontext.SendingContextServiceContext;
-import jdk.internal.org.xml.sax.SAXException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -28,7 +26,7 @@ import java.util.List;
 /**
  * Created by Yasi on 10/29/2016.
  */
-public class Terminal {
+public class Terminal extends Thread {
     private String localhost = "127.0.0.1";
     private Integer serverPORT;
     private String terminalId;
@@ -37,87 +35,68 @@ public class Terminal {
     public List<Transaction> transactions = new ArrayList<Transaction>();
     public List<String> logFile = new ArrayList<String>();
 
-    private void run() throws IOException {
-        String serverAddress = localhost;//getServerAddress();
-        Socket socket = new Socket(serverAddress, serverPORT);
-        String ack;
-        System.out.println("Run: ");
+    public String getOutLogPath() {
+        return outLogPath;
+    }
 
-        // Process all messages from server, according to the protocol
-        DataInputStream din = new DataInputStream(socket.getInputStream());
-        System.out.println("1: ");
-        DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
-        System.out.println("2: ");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("3: ");
-        ObjectOutputStream outStreamObject = new ObjectOutputStream(socket.getOutputStream());
+    public void run() {
+        try {
+            parseXML(Thread.currentThread().getName().toString());
+            System.out.println("New Thread");
+            String serverAddress = localhost;//getServerAddress();
+            Socket socket = new Socket(serverAddress, serverPORT);
+            String ack;
+            System.out.println("Run: ");
 
-        System.out.println("4: ");
-        System.out.println("befor try: ");
 
-        Integer x = (transactions.size());
-        String msg = x.toString() + "," + terminalId;
-        dout.writeUTF(msg); //Write
-        log("terminal id = " + terminalId);
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            // Process all messages from server, according to the protocol
+            DataInputStream din = new DataInputStream(socket.getInputStream());
+            System.out.println("1: ");
+            DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
+            System.out.println("2: ");
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            System.out.println("3: ");
+            ObjectOutputStream outStreamObject = new ObjectOutputStream(socket.getOutputStream());
+            System.out.println("4: ");
 
-        if ("received".equals(din.readUTF())) { //Read
-            for (int i = 0; i < transactions.size(); i++) {
-                System.out.println(transactions.get(i).getType() + " - " + transactions.get(i).getId());
-                outStreamObject.writeObject(transactions.get(i));//write
 
-                Calendar cal = Calendar.getInstance();
-                //System.out.println(dateFormat.format(cal.getTime())); //2014/08/06 16:00:22
+            Integer x = (transactions.size());
+            String msg = x.toString() + "," + terminalId;
+            dout.writeUTF(msg); //Write
+            log("terminal id = " + terminalId);
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
-                logFile.add(dateFormat.format(cal.getTime()) + " Request for Deposit :" + transactions.get(i).getDeposit() + " --transaction-> type: " + transactions.get(i).getType()
-                        + " # amount = " + transactions.get(i).getAmount()
-                );
+            if ("received".equals(din.readUTF())) { //Read
+                for (int i = 0; i < transactions.size(); i++) {
+                    log("thread name " + Thread.currentThread().getName());
+                    // System.out.println(transactions.get(i).getType() + " - " + transactions.get(i).getId());
+                    outStreamObject.writeObject(transactions.get(i));//write
+                    Calendar cal = Calendar.getInstance();
+                    logFile.add(dateFormat.format(cal.getTime()) + " Request for Deposit :" + transactions.get(i).getDeposit() + " --transaction-> type: " + transactions.get(i).getType()
+                            + " # amount = " + transactions.get(i).getAmount());
 
-                ack = din.readUTF();
-                if (ack.startsWith(",")) {
-                    log("ackkk : " + ack.replaceAll(",", ""));
-
-                    transactions.get(i).setAmount(parseInt(ack.replaceAll(",", "")));
-                    ack = ack.replaceAll(",", "New amount is ");
-                   // log("received trans : " + parseInt(ack));
-                } else {
-                    log("Error: " + ack);
-                }
-
-                logFile.add(dateFormat.format(cal.getTime()) + " Response -> "+ ack);
-                //log("11111received trans : "+receivedTrans.getAmount());
-                        /*
-                        if (!receivedTrans.getAmount().equals(0)) {
-                            transactions.get(i).setAmount(receivedTrans.getAmount());
-                            log("received trans : "+receivedTrans.getAmount());
-                        }
-                    } catch (ClassNotFoundException e) {
-                        System.out.println(e);
+                    ack = din.readUTF();
+                    if (ack.startsWith(",")) {
+                        transactions.get(i).setAmount(parseInt(ack.replaceAll(",", "")));
+                        ack = ack.replaceAll(",", "New amount is ");
+                    } else {
+                        log("Error: " + ack);
                     }
-                    */
-                log("forrr " + i);
+                    logFile.add(dateFormat.format(cal.getTime()) + " Response -> " + ack);
+                }
+                /*
+                for (Transaction transaction : transactions) {
+                    System.out.println(transaction.getDeposit() + " --> " + transaction.getAmount());
+                }
+                */
+                writeIntoAccessFile(outLogPath);
+                writeInXMLFile();
+                System.out.println("Stop listening: " + outLogPath);
+            } else {
+                //connection failled
             }
-            //Connect
-            writeIntoAccessFile(outLogPath);
-            for (Transaction transaction : transactions) {
-                System.out.println(transaction.getDeposit() + " --> " + transaction.getAmount());
-            }
-            /*
-            String str = "", str2 = "";
-            while (!str.equals("stop")) {
-                log("Terminal  listeninggggg: ");
-                str = br.readLine();
-                dout.writeUTF(str);
-                dout.flush();
-                log("Flushed: ");
-                str2 = din.readUTF();
-                System.out.println("Server says: " + str2);
-            }
-            */
-            System.out.println("Stop listening: ");
-
-        } else {
-            //connection failled
+        } catch (IOException e) {
+            System.out.println("Error : " + e.getMessage());
         }
     }
 
@@ -127,6 +106,7 @@ public class Terminal {
 
     private void parseXML(String terminalName) {
         try {
+            log("parseXML  " + terminalName);
             File inputFile;
             inputFile = new File("src/main/resources/" + terminalName + ".xml");
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -154,11 +134,15 @@ public class Terminal {
                     transactions.add(trnsaction);
                 }
             }
+            log("XML FILE Successfully parsed..");
         } catch (ParserConfigurationException e) {
+            System.out.println("Error : "+e.getMessage());
             System.exit(1);
         } catch (org.xml.sax.SAXException e) {
+            System.out.println("Error : "+e.getMessage());
             System.exit(1);
         } catch (IOException e) {
+            System.out.println("Error : "+e.getMessage());
             System.exit(1);
         }
     }
@@ -171,33 +155,111 @@ public class Terminal {
             raf.seek(file.length());
             raf.writeBytes("\n");
             //raf.writeBytes("\nThis will complete the Project.");
+            int i =0;
             for (String str : logFile) {
-                raf.writeBytes("\n" + str);
+                raf.writeBytes("\n id = " +i);
+                raf.writeBytes("\n  " + str);
+                i++;
             }
+            logFile.clear();
             raf.close();
         } catch (IOException e) {
             System.out.println("IOException:");
         }
     }
 
-    private void writeInXMLFile(String fileName) {
+    private void writeInXMLFile() {
         DocumentBuilderFactory icFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder icBuilder;
         try {
             icBuilder = icFactory.newDocumentBuilder();
             Document doc = icBuilder.newDocument();
-            Element mainRootElement = doc.createElementNS("DotinSchool", "terminal");
-            mainRootElement.setAttribute("id",terminalId);
-            mainRootElement.setAttribute("type",terminalType);
+            Element mainRootElement = doc.createElement("terminal");
+            mainRootElement.setAttribute("id", terminalId);
+            mainRootElement.setAttribute("type", terminalType);
             doc.appendChild(mainRootElement);
 
             Element rootChilde = doc.createElement("transactions");
             mainRootElement.appendChild(rootChilde);
 
             // append child elements to root element
-            for (Transaction transaction: transactions)
-                mainRootElement.appendChild(getTransaction(doc, transaction.getId().toString(), transaction.getDeposit(), transaction.getType(), transaction.getAmount().toString()));
+            for (Transaction transaction : transactions)
+                rootChilde.appendChild(getTransaction(doc, transaction.getId().toString(), transaction.getDeposit(), transaction.getType(), transaction.getAmount().toString()));
 
+            // output DOM XML to console
+            Transformer transformer = TransformerFactory.newInstance().newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            DOMSource source = new DOMSource(doc);
+            //StreamResult console = new StreamResult(System.out);
+            String name="terminal"+terminalId+"Response.xml";
+            StreamResult sr = new StreamResult(new File(name));
+            transformer.transform(source, sr);
+
+            System.out.println("\nXML DOM Created Successfully..");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static Node getTransaction(Document doc, String id, String deposit, String type, String balance) {
+        Element transaction = doc.createElement("transaction");
+        transaction.setAttribute("type", type);
+        transaction.setAttribute("deposit", deposit);
+        transaction.setAttribute("id", id);
+        transaction.setAttribute("balance", balance);
+        return transaction;
+    }
+
+    public static void main(String[] args) throws IOException {
+        new Thread(new Terminal(), "terminal").start();
+        new Thread(new Terminal(), "terminal1").start();
+
+        //Terminal t = new Terminal();
+       // t.writeTest("test");
+/*
+        Terminal terminal2 = new Terminal();
+        terminal2.parseXML("terminal2");
+        terminal2.run();
+        terminal2.writeInXMLFile("response2.xml");
+        terminal2.writeIntoAccessFile(terminal2.getOutLogPath());
+*/
+        System.out.println("Out of run ");
+    }
+
+    private void writeTest(String fileName) {
+        DocumentBuilderFactory icFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder icBuilder;
+        try {
+            icBuilder = icFactory.newDocumentBuilder();
+            Document doc = icBuilder.newDocument();
+            Element mainRootElement = doc.createElement("terminal");
+            mainRootElement.setAttribute("id", "21374");
+            mainRootElement.setAttribute("type", "ATM");
+            doc.appendChild(mainRootElement);
+
+            Element server = doc.createElement("server");
+            server.setAttribute("ip", "localhost");
+            server.setAttribute("port", "8080");
+            mainRootElement.appendChild(server);
+
+            Element outlog = doc.createElement("outLog");
+            outlog.setAttribute("path", "term21374.log");
+            mainRootElement.appendChild(outlog);
+
+            Element rootChilde = doc.createElement("transactions");
+            mainRootElement.appendChild(rootChilde);
+
+            // append child elements to root element
+            for (Integer i = 1; i <= 1000; i++) {
+                //rootChilde.appendChild(getTransaction(doc,i.toString(),"withdraw","1,000","33227781"));
+                Element transaction = doc.createElement("transaction");
+                transaction.setAttribute("id", i.toString());
+                transaction.setAttribute("type", "withdraw");
+                transaction.setAttribute("amount", "1,000");
+                transaction.setAttribute("deposit", "33227781");
+                rootChilde.appendChild(transaction);
+            }
             // output DOM XML to console
             Transformer transformer = TransformerFactory.newInstance().newTransformer();
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -213,26 +275,5 @@ public class Terminal {
         }
     }
 
-    private static Node getTransaction(Document doc, String id, String deposit, String type, String balance) {
-        Element transaction = doc.createElement("transaction");
-        transaction.setAttribute("deposit", deposit);
-        transaction.setAttribute("type", type);
-        transaction.setAttribute("balance", balance);
-        transaction.setAttribute("id", id);
-        return transaction;
-    }
 
-    public static void main(String[] args) throws IOException {
-        Terminal terminal = new Terminal();
-        terminal.parseXML("terminal");
-        terminal.run();
-        terminal.writeInXMLFile("response.xml");
-        //terminal.writeIntoAccessFile("");
-
-        Terminal terminal1 = new Terminal();
-        terminal1.parseXML("terminal1");
-        terminal1.run();
-        terminal1.writeInXMLFile("response1.xml");
-        System.out.println("Out of run ");
-    }
 }
