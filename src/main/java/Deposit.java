@@ -11,7 +11,7 @@ public class Deposit {
     private String id;
     private Integer initialBalance;
     private BigDecimal upperBound;
-    Boolean lock=false;
+    Boolean lock = false;
 
     public Deposit(String customer, String id, Integer initialBalance, BigDecimal upperBound) {
         this.customer = customer;
@@ -28,10 +28,6 @@ public class Deposit {
         return id;
     }
 
-    public BigDecimal getUpperBound() {
-        return upperBound;
-    }
-
     public Integer getInitialBalance() {
         return initialBalance;
     }
@@ -39,7 +35,7 @@ public class Deposit {
     public void withdraw(Integer amount) throws BalanceException {
         synchronized (this) {
 
-       // if(Thread.currentThread().getName().equals("Thread-0")) {
+            // if(Thread.currentThread().getName().equals("Thread-0")) {
             try {
 /*
                 if (!lock) {
@@ -49,29 +45,30 @@ public class Deposit {
                 }
 */
 
-                Integer temp = initialBalance -amount;
+                Integer temp = initialBalance - amount;
                 Thread.currentThread().sleep(1000);
-                System.out.println("withDrawwwwwwww: " + Thread.currentThread().getName()+"  "+initialBalance);
+                System.out.println("withDrawwwwwwww: " + Thread.currentThread().getName() + "  " + initialBalance);
                 initialBalance = temp;
             } catch (InterruptedException e) {
                 System.out.println("Error: " + e.getMessage());
             }
-      }
+        }
         /*
-            if (amount <= initialBalance) {
+            if(amount < 0) throw new BalanceException("Negative transactions is not allowed.");
+            else if (amount <= initialBalance) {
                 initialBalance = initialBalance - amount;
             } else throw new BalanceException("There is not enough balance.");
             System.out.println("withdraw " + initialBalance);
             */
-      //  }
+        //  }
 
     }
 
     public void deposit(Integer amount) throws BalanceException {
-       synchronized (this) {
+        synchronized (this) {
             Integer temp = amount + initialBalance;
             initialBalance = temp;
-           System.out.println("deposiiiiiiiiiiiiiiiit: " + Thread.currentThread().getName()+"  "+ initialBalance);
+            System.out.println("deposiiiiiiiiiiiiiiiit: " + Thread.currentThread().getName() + "  " + initialBalance);
 
             /*
             if (lock) {
@@ -80,10 +77,11 @@ public class Deposit {
                 //lock = false;
             }
             /*
-            if (temp <= upperBound.intValue()) {
+            Integer temp = amount + initialBalance;
+            if(amount < 0) throw new BalanceException("Negative transactions is not allowed.");
+            else if (temp <= upperBound.intValue()) {
                 initialBalance = temp;
             } else throw new BalanceException("Transaction is more than amount that allowed.");
-            System.out.println("Deposit " + initialBalance);
             */
         }
     }

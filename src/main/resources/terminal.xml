@@ -1,10 +1,12 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-        <terminal id ="21374" type="ATM">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<terminal id="21374" type="ATM">
     <server ip="localhost" port="8080"/>
-        <outLog path="term21374.log"/>
+    <outLog path="term21374.log"/>
     <transactions>
-        <transaction id="1" type="withdraw" amount="3,000" deposit="33227781"/>
-        <transaction id="2" type="withdraw" amount="10,000" deposit="35527439"/>
+        <transaction amount="1,000" deposit="33227781" id="1" type="withdraw"/>
+        <transaction amount="1,000" deposit="33227781" id="2" type="deposit"/>
+        <transaction amount="1,000" deposit="33227781" id="3" type="withdraw"/>
+        <transaction amount="1,000" deposit="33227781" id="4" type="deposit"/>
+        <transaction amount="2,000" deposit="33227781" id="5" type="deposit"/>
     </transactions>
-
 </terminal>

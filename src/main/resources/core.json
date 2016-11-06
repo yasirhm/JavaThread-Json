@@ -12,6 +12,12 @@
       "id":"35527439",
       "initialBalance":"0",
       "upperBound":"0"
+    },
+    {
+      "customer":"Yasi Yasi ",
+      "id":"35527312",
+      "initialBalance":"10",
+      "upperBound":"2,000,000"
     }
   ],
   "outLog":"server.out"

@@ -35,50 +35,35 @@ public class Terminal extends Thread {
     public List<Transaction> transactions = new ArrayList<Transaction>();
     public List<String> logFile = new ArrayList<String>();
 
-    public String getOutLogPath() {
-        return outLogPath;
-    }
-
     public void run() {
         try {
             parseXML(Thread.currentThread().getName().toString());
-            System.out.println("New Thread");
             String serverAddress = localhost;//getServerAddress();
             Socket socket = new Socket(serverAddress, serverPORT);
-            String ack;
             System.out.println("Run: ");
 
-
-            // Process all messages from server, according to the protocol
-            DataInputStream din = new DataInputStream(socket.getInputStream());
-            System.out.println("1: ");
-            DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
-            System.out.println("2: ");
-            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("3: ");
+            // Process all messages from server
+            DataInputStream inputDat = new DataInputStream(socket.getInputStream());
+            DataOutputStream outputData = new DataOutputStream(socket.getOutputStream());
+            BufferedReader inputBuffer = new BufferedReader(new InputStreamReader(System.in));
             ObjectOutputStream outStreamObject = new ObjectOutputStream(socket.getOutputStream());
-            System.out.println("4: ");
 
-
-            Integer x = (transactions.size());
-            String msg = x.toString() + "," + terminalId;
-            dout.writeUTF(msg); //Write
-            log("terminal id = " + terminalId);
+            Integer temp = (transactions.size());
+            String msg = temp.toString() + "," + terminalId;
+            outputData.writeUTF(msg); //Write
             DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
-            if ("received".equals(din.readUTF())) { //Read
+            if ("received".equals(inputDat.readUTF())) { //Read
                 for (int i = 0; i < transactions.size(); i++) {
                     log("thread name " + Thread.currentThread().getName());
-                    // System.out.println(transactions.get(i).getType() + " - " + transactions.get(i).getId());
-                    outStreamObject.writeObject(transactions.get(i));//write
+                    outStreamObject.writeObject(transactions.get(i));//Write
                     Calendar cal = Calendar.getInstance();
                     logFile.add(dateFormat.format(cal.getTime()) + " Request for Deposit :" + transactions.get(i).getDeposit() + " --transaction-> type: " + transactions.get(i).getType()
                             + " # amount = " + transactions.get(i).getAmount());
-
-                    ack = din.readUTF();
+                    String ack = inputDat.readUTF(); //Read
                     if (ack.startsWith(",")) {
                         transactions.get(i).setAmount(parseInt(ack.replaceAll(",", "")));
-                        ack = ack.replaceAll(",", "New amount is ");
+                        ack = ack.replaceAll(",", "New balance is ");
                     } else {
                         log("Error: " + ack);
                     }
@@ -106,7 +91,6 @@ public class Terminal extends Thread {
 
     private void parseXML(String terminalName) {
         try {
-            log("parseXML  " + terminalName);
             File inputFile;
             inputFile = new File("src/main/resources/" + terminalName + ".xml");
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -127,22 +111,22 @@ public class Terminal extends Thread {
                 Node nNode = nList.item(i);
                 if (nNode.getNodeType() == Node.ELEMENT_NODE) {
                     Element eElement = (Element) nNode;
-                    Transaction trnsaction = new Transaction(parseInt(eElement.getAttribute("id")),
+                    Transaction transaction = new Transaction(parseInt(eElement.getAttribute("id")),
                             eElement.getAttribute("type"),
                             parseInt(eElement.getAttribute("amount").replaceAll(",", "")),
                             eElement.getAttribute("deposit"));
-                    transactions.add(trnsaction);
+                    transactions.add(transaction);
                 }
             }
             log("XML FILE Successfully parsed..");
         } catch (ParserConfigurationException e) {
-            System.out.println("Error : "+e.getMessage());
+            System.out.println("Error : " + e.getMessage());
             System.exit(1);
         } catch (org.xml.sax.SAXException e) {
-            System.out.println("Error : "+e.getMessage());
+            System.out.println("Error : " + e.getMessage());
             System.exit(1);
         } catch (IOException e) {
-            System.out.println("Error : "+e.getMessage());
+            System.out.println("Error : " + e.getMessage());
             System.exit(1);
         }
     }
@@ -154,10 +138,10 @@ public class Terminal extends Thread {
             raf.writeBytes("Terminal ID " + terminalId + "\n");
             raf.seek(file.length());
             raf.writeBytes("\n");
-            //raf.writeBytes("\nThis will complete the Project.");
-            int i =0;
+
+            int i = 0;
             for (String str : logFile) {
-                raf.writeBytes("\n id = " +i);
+                raf.writeBytes("\n id = " + i);
                 raf.writeBytes("\n  " + str);
                 i++;
             }
@@ -191,12 +175,10 @@ public class Terminal extends Thread {
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             DOMSource source = new DOMSource(doc);
             //StreamResult console = new StreamResult(System.out);
-            String name="terminal"+terminalId+"Response.xml";
+            String name = "terminal" + terminalId + "Response.xml";
             StreamResult sr = new StreamResult(new File(name));
             transformer.transform(source, sr);
-
             System.out.println("\nXML DOM Created Successfully..");
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -215,16 +197,7 @@ public class Terminal extends Thread {
         new Thread(new Terminal(), "terminal").start();
         new Thread(new Terminal(), "terminal1").start();
 
-        //Terminal t = new Terminal();
-       // t.writeTest("test");
-/*
-        Terminal terminal2 = new Terminal();
-        terminal2.parseXML("terminal2");
-        terminal2.run();
-        terminal2.writeInXMLFile("response2.xml");
-        terminal2.writeIntoAccessFile(terminal2.getOutLogPath());
-*/
-        System.out.println("Out of run ");
+        System.out.println("Terminal Stopped");
     }
 
     private void writeTest(String fileName) {
@@ -274,6 +247,4 @@ public class Terminal extends Thread {
             e.printStackTrace();
         }
     }
-
-
 }

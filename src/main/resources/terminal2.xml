@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<terminal id ="5858" type="ATM">
+    <server ip="localhost" port="8080"/>
+    <outLog path="term5858.log"/>
+    <transactions>
+        <transaction id="1" type="withdraw" amount="1,000" deposit="33227781"/>
+        <transaction id="2" type="deposit" amount="1,000" deposit="35527439"/>
+        <transaction id="3" type="withdraw" amount="50" deposit="35527439"/>
+    </transactions>
+
+</terminal>
